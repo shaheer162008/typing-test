@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 
@@ -46,10 +46,10 @@ export default function ForgotPassword() {
           {/* Back to Sign In Link with correct URL */}
           <div className="mt-6 text-center">
             <Link
-              href="/sign-in"
+              href="/auth/sign-in"
               className="text-[14px] font-bold text-[#126dfb] hover:text-blue-700 transition-colors"
             >
-              ← Back to sign in
+              â† Back to sign in
             </Link>
           </div>
 

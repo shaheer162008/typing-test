@@ -2,12 +2,13 @@ import type { NavLink, FooterSection, Testimonial, FAQItem, BlogArticle } from "
 import Image from "next/image";
 
 export const navLinks: NavLink[] = [
-  { name: "Practice by Time", href: "/typing-practice" },
-  { name: "Test by Time", href: "/typing-test" },
-  { name: "Blogs", href: "/blogs" },
-  { name: "About", href: "/about" },
-  { name: "Contact", href: "/contact" },
-  { name: "Sign In", href: "/sign-in" },
+  { name: "Typing Test", href: "/typing-test" },
+  { name: "Practice", href: "/typing-practice" },
+  { name: "Word Typing", href: "/word-typing" },
+  { name: "WPM Guide", href: "/wpm-guide" },
+  { name: "Blog", href: "/blogs" },
+  { name: "Dashboard", href: "/dashboard" },
+  { name: "Sign In", href: "/auth/sign-in" },
 ];
 
 export const footerLinks: FooterSection[] = [

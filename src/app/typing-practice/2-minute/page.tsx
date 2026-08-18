@@ -151,7 +151,7 @@ export default function TypingPractice2MinutePage() {
               <button onClick={restartTest} className="w-full sm:w-auto px-8 py-3.5 bg-[#126dfb] hover:bg-blue-600 text-white font-semibold rounded-xl transition-all shadow-sm">
                 Restart Practice
               </button>
-              <Link href="/sign-in" className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold rounded-xl transition-all text-center">
+              <Link href="/auth/sign-in" className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold rounded-xl transition-all text-center">
                 Save Result
               </Link>
             </>
@@ -190,7 +190,7 @@ export default function TypingPractice2MinutePage() {
                 <button onClick={restartTest} className="w-full py-3 bg-[#126dfb] hover:bg-blue-600 text-white font-semibold rounded-xl transition-all">
                   Try Again
                 </button>
-                <Link href="/sign-in" className="block w-full text-center py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all">
+                <Link href="/auth/sign-in" className="block w-full text-center py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all">
                   Save &amp; Get Certificate
                 </Link>
                 <Link href="/typing-practice" className="block w-full text-center py-3 text-[#126dfb] font-semibold hover:underline">
@@ -214,3 +214,4 @@ function StatBox({ label, value, color, icon }: { label: string; value: string |
     </div>
   );
 }
+

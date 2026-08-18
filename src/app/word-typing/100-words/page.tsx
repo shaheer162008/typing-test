@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
@@ -107,7 +107,7 @@ export default function WordTyping100WordsPage() {
         <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <Link href="/word-typing" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
-              ← Back to Word Count Tests
+              â† Back to Word Count Tests
             </Link>
             <h1 className="text-3xl font-bold text-gray-900">100 Word Test</h1>
           </div>
@@ -138,7 +138,7 @@ export default function WordTyping100WordsPage() {
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full transition-all duration-300"
+              className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-300"
               style={{ width: `${words.length > 0 ? (stats.totalWords / words.length) * 100 : 0}%` }}
             />
           </div>
@@ -155,7 +155,7 @@ export default function WordTyping100WordsPage() {
                   ? "bg-green-50 border-green-200 text-green-700"
                   : "bg-red-50 border-red-200 text-red-600 line-through";
               } else if (index === completedWords.length) {
-                className += "bg-purple-50 border-purple-200 text-gray-900 animate-pulse";
+                className += "bg-blue-50 border-blue-200 text-gray-900 animate-pulse";
               } else {
                 className += "bg-gray-50 border-gray-200 text-gray-300";
               }
@@ -176,8 +176,8 @@ export default function WordTyping100WordsPage() {
             onChange={handleInputChange}
             disabled={isFinished}
             autoFocus={!isActive && !isFinished}
-            className="w-full px-6 py-4 text-lg font-mono bg-[#f8fafc] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
-            placeholder={isFinished ? "Test complete — click Restart to continue" : "Start typing the words above..."}
+            className="w-full px-6 py-4 text-lg font-mono bg-[#f8fafc] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+            placeholder={isFinished ? "Test complete â€” click Restart to continue" : "Start typing the words above..."}
             aria-label="Word typing input"
           />
         </div>
@@ -187,7 +187,7 @@ export default function WordTyping100WordsPage() {
             <>
               <button
                 onClick={restartTest}
-                className="w-full sm:w-auto px-8 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all shadow-sm"
+                className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-sm"
               >
                 Retry 100 Words
               </button>
@@ -212,8 +212,8 @@ export default function WordTyping100WordsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
             <div className="bg-white rounded-2xl p-8 max-w-md w-full animate-in zoom-in-95 slide-in-from-bottom-4">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Image src="/icons/certificate.svg" alt="" width={32} height={32} className="object-contain text-purple-600" aria-hidden="true" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Image src="/icons/certificate.svg" alt="" width={32} height={32} className="object-contain text-blue-600" aria-hidden="true" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Test Complete!</h2>
                 <p className="text-gray-500 mt-1">100 Word Test</p>
@@ -229,7 +229,7 @@ export default function WordTyping100WordsPage() {
                   <p className="text-xs text-gray-500">Accuracy</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-purple-600">{stats.correctWords}/{words.length}</p>
+                  <p className="text-3xl font-bold text-blue-600">{stats.correctWords}/{words.length}</p>
                   <p className="text-xs text-gray-500">Correct</p>
                 </div>
               </div>
@@ -237,7 +237,7 @@ export default function WordTyping100WordsPage() {
               <div className="space-y-3">
                 <button
                   onClick={restartTest}
-                  className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all"
                 >
                   Try Again
                 </button>
@@ -264,7 +264,7 @@ export default function WordTyping100WordsPage() {
 
 function StatBox({ label, value, color, icon }: { label: string; value: string | number; color: string; icon: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 text-center hover:border-purple-300/30 hover:shadow-md transition-all">
+    <div className="bg-white rounded-xl border border-gray-100 p-5 text-center hover:border-blue-300/30 hover:shadow-md transition-all">
       <Image src={icon} alt="" width={24} height={24} className="mx-auto mb-2 object-contain" style={{ filter: `drop-shadow(0 0 0 ${color})` }} aria-hidden="true" />
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>

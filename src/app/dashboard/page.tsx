@@ -42,7 +42,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign In Required</h1>
           <p className="text-gray-500 mb-6">Please sign in to access your dashboard.</p>
           <Link
-            href="/sign-in"
+            href="/auth/sign-in"
             className="inline-flex items-center justify-center gap-2 bg-[#126dfb] hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all shadow-sm"
           >
             <Image src="/icons/google-auth.svg" alt="Google" width={20} height={20} className="object-contain" />
@@ -80,7 +80,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <section className="mb-12">
+        <section className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <ActionCard
@@ -101,6 +101,26 @@ export default function DashboardPage() {
               href="/word-typing"
               icon="/icons/certificate.svg"
             />
+          </div>
+        </section>
+
+        {/* My Certificates */}
+        <section className="mb-16">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">My Certificates</h2>
+            <Link href="/certificates" className="text-sm text-[#126dfb] font-medium hover:underline">
+              Verify a Certificate →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { id: 1, title: "Speed Demon", wpm: "100+", description: "Achieved 100+ WPM on a verified test", date: "Aug 15, 2025", status: "earned", certId: "TT-9X82-KL1M" },
+              { id: 2, title: "Accuracy Master", wpm: "98%+", description: "Maintained 98%+ accuracy over 10 tests", date: "Aug 12, 2025", status: "earned", certId: "TT-4A19-PL9Q" },
+              { id: 3, title: "Streak Champion", wpm: "30 days", description: "Completed a test every day for 30 days", date: "Aug 10, 2025", status: "earned", certId: "TT-7B33-MN2W" },
+              { id: 4, title: "Century Club", wpm: "100 WPM", description: "Reached 100 WPM milestone", date: "—", status: "locked" },
+            ].map((cert) => (
+              <CertificateCard key={cert.id} cert={cert} />
+            ))}
           </div>
         </section>
 
@@ -164,5 +184,56 @@ function ActionCard({ title, description, href, icon }: { title: string; descrip
       <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
       <p className="text-sm text-gray-500">{description}</p>
     </Link>
+  );
+}
+
+function CertificateCard({ cert }: { cert: any }) {
+  const isEarned = cert.status === "earned";
+
+  return (
+    <div className={`relative bg-white rounded-2xl border overflow-hidden transition-all duration-300 ${
+      isEarned ? "border-blue-200 hover:border-blue-300 hover:shadow-lg" : "border-gray-100 opacity-60"
+    }`}>
+      <div className="aspect-[4/3] relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-white p-6 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div className="w-10 h-10 bg-white/80 rounded-xl flex items-center justify-center backdrop-blur-sm border border-blue-100">
+              <Image src="/icons/certificate.svg" alt="" width={24} height={24} className="object-contain text-[#126dfb]" aria-hidden="true" />
+            </div>
+            <span className={`text-2xl font-bold ${isEarned ? "text-[#126dfb]" : "text-gray-300"}`}>
+              {isEarned ? "✓" : "🔒"}
+            </span>
+          </div>
+          <div className="text-center">
+            <p className={`text-3xl font-bold ${isEarned ? "text-gray-900" : "text-gray-400"}`}>{cert.title}</p>
+            <p className={`text-lg font-semibold mt-2 ${isEarned ? "text-[#126dfb]" : "text-gray-300"}`}>{cert.wpm}</p>
+          </div>
+          <div className="text-right">
+            {isEarned && <p className="text-xs text-gray-500 font-mono">ID: {cert.certId}</p>}
+            {!isEarned && <span className="text-xs text-gray-400 font-semibold bg-gray-100 px-2 py-1 rounded-full">Locked</span>}
+          </div>
+        </div>
+      </div>
+      <div className="p-6">
+        <p className={`text-sm leading-relaxed mb-4 ${isEarned ? "text-gray-600" : "text-gray-400"}`}>{cert.description}</p>
+        {isEarned ? (
+          <div className="flex gap-3">
+            <button className="flex-1 bg-[#126dfb] hover:bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm">
+              Download PDF
+            </button>
+            <button className="flex-1 border border-gray-200 hover:bg-gray-50 text-gray-700 py-2.5 rounded-xl font-medium text-sm transition-colors">
+              Share Link
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/typing-test"
+            className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-500 py-2.5 rounded-xl font-medium text-sm transition-colors"
+          >
+            Take Test to Unlock
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }

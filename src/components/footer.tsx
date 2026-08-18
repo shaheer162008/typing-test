@@ -3,7 +3,7 @@ import Image from "next/image";
 
 const footerLinks = [
   {
-    title: "Platform",
+    title: "Tests & Practice",
     links: [
       { name: "Typing Test", href: "/typing-test" },
       { name: "Typing Practice", href: "/typing-practice" },
@@ -13,19 +13,19 @@ const footerLinks = [
     ]
   },
   {
-    title: "Resources",
+    title: "Learn & Improve",
     links: [
-      { name: "Typing Tips", href: "/tips" },
       { name: "WPM Guide", href: "/wpm-guide" },
-      { name: "Blog", href: "/blog" },
+      { name: "Typing Tips", href: "/tips" },
+      { name: "Blog", href: "/blogs" },
+      { name: "FAQs", href: "/faqs" },
       { name: "Dashboard", href: "/dashboard" }
     ]
   },
   {
-    title: "Company and Legal",
+    title: "Company",
     links: [
-      { name: "About", href: "/about" },
-      { name: "FAQs", href: "/faqs" },
+      { name: "About Us", href: "/about" },
       { name: "Contact", href: "/contact" },
       { name: "Privacy Policy", href: "/privacy-policy" },
       { name: "Terms of Service", href: "/terms-of-service" }
@@ -66,7 +66,7 @@ export default function Footer() {
 
             <div className="flex flex-col items-start gap-4">
               <Link
-                href="/sign-in"
+                href="/auth/sign-in"
                 className="inline-block bg-[#126dfb] hover:bg-blue-600 text-white text-[14px] font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#126dfb] focus-visible:ring-offset-2"
               >
                 Sign In with Google
@@ -122,7 +122,7 @@ export default function Footer() {
         <div className="pt-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
           {/* Left side */}
           <p className="text-[14px] text-gray-600">
-            © 2026 Typing Test Skill. All rights reserved.
+            &copy; 2026 Typing Test Skill. All rights reserved.
           </p>
 
           {/* Right side */}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
@@ -116,7 +116,7 @@ export default function TypingTest2MinutePage() {
         <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <Link href="/typing-test" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
-              ← Back to Timed Tests
+              â† Back to Timed Tests
             </Link>
             <h1 className="text-3xl font-bold text-gray-900">2 Minute Typing Test</h1>
           </div>
@@ -164,7 +164,7 @@ export default function TypingTest2MinutePage() {
                 className += "text-gray-300";
               }
               if (char === " ") className += " w-2";
-              return <span key={index} className={className}>{char === " " ? "␣" : char}</span>;
+              return <span key={index} className={className}>{char === " " ? "â£" : char}</span>;
             })}
           </div>
 
@@ -183,7 +183,7 @@ export default function TypingTest2MinutePage() {
             disabled={isFinished}
             autoFocus={!isActive && !isFinished}
             className="w-full px-6 py-4 text-lg font-mono bg-[#f8fafc] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#126dfb] focus:ring-2 focus:ring-[#126dfb]/20 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
-            placeholder={isFinished ? "Test complete — click Restart to try again" : "Start typing here..."}
+            placeholder={isFinished ? "Test complete â€” click Restart to try again" : "Start typing here..."}
             aria-label="Typing input"
           />
         </div>
@@ -198,7 +198,7 @@ export default function TypingTest2MinutePage() {
                 Restart Test
               </button>
               <Link
-                href="/sign-in"
+                href="/auth/sign-in"
                 className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold rounded-xl transition-all text-center"
               >
                 Save Result
@@ -248,7 +248,7 @@ export default function TypingTest2MinutePage() {
                   Try Again
                 </button>
                 <Link
-                  href="/sign-in"
+                  href="/auth/sign-in"
                   className="block w-full text-center py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all"
                 >
                   Save & Get Certificate

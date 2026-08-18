@@ -1,10 +1,19 @@
+"use client";
+import Image from "next/image";
+import { motion } from "framer-motion";
+
 export default function AboutHero() {
   return (
     <section className="py-20 md:py-28 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
         
         {/* Left Side: Content */}
-        <div className="lg:col-span-6">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
+          className="lg:col-span-6"
+        >
           <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-[#126dfb] text-[13px] font-medium mb-6">
             About Typing Test Skill
           </div>
@@ -24,16 +33,21 @@ export default function AboutHero() {
               Explore Platform
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right Side: Exact Clean Google SERP Card Layout */}
-        <div className="lg:col-span-6 relative">
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="lg:col-span-6 relative"
+        >
           
           {/* Main Container Card (Clean, minimal border/padding) */}
-          <div className="relative rounded-[2.5rem] p-6 md:p-8 overflow-hidden">
+          <div className="relative rounded-[2.5rem] p-6 md:p-8 overflow-hidden bg-[#f8fafc] border border-gray-100">
             
             {/* Google Search Result Box */}
-            <div className="relative p-6 pb-12 rounded-2xl bg-white shadow-sm">
+            <div className="relative p-6 pb-12 rounded-2xl bg-white shadow-sm border border-gray-50">
               
               {/* Breadcrumb / URL */}
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
@@ -57,18 +71,23 @@ export default function AboutHero() {
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                   <span>Our Core Mission</span>
                 </div>
-                {/* Clicking Mouse Cursor */}
-                <div className="relative -ml-1 -mt-2">
-                  <svg className="w-6 h-6 text-gray-900 drop-shadow-lg transform -rotate-12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M5.65376 12.3673H5.65452C5.17646 12.3673 4.90805 11.8152 5.21583 11.4398L11.5173 3.63977C11.7854 3.30964 12.2146 3.30964 12.4827 3.63977L18.7842 11.4398C19.0919 11.8152 18.8235 12.3673 18.3455 12.3673H13.5V20.25C13.5 20.6642 13.1642 21 12.75 21H11.25C10.8358 21 10.5 20.6642 10.5 20.25V12.3673H5.65376Z" />
-                  </svg>
+                {/* Clicking Mouse Cursor using Custom Icon */}
+                <div className="relative -ml-2 mt-2">
+                  <Image
+                    src="/icons/mouse-cursor-icon.png"
+                    alt="Mouse Cursor"
+                    width={24}
+                    height={24}
+                    className="drop-shadow-md transform -rotate-12 object-contain"
+                    aria-hidden="true"
+                  />
                 </div>
               </div>
 
             </div>
 
           </div>
-        </div>
+        </motion.div>
 
       </div>
     </section>

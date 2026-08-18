@@ -13,8 +13,8 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Typing Test - SaaS",
-  description: "Improve your typing speed",
+  title: "Typing Test Skill - Free Online Typing Test & Certification",
+  description: "Free online typing test to improve your WPM speed and accuracy. Track progress, earn certificates, and master typing with Typing Test Skill.",
 };
 
 export const viewport: Viewport = {

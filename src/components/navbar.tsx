@@ -5,29 +5,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { navLinks } from "@/lib/constants";
 
-const startIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14M12 5l7 7-7 7" />
-  </svg>
-);
-
-const hamburgerIcon = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
-  </svg>
-);
-
-const closeIcon = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
-const mobileCTAIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14M12 5l7 7-7 7" />
-  </svg>
-);
+// Missing icons - using text placeholders until PNG assets are provided
+// Missing: start-icon.png, menu-icon.png, close-icon.png
+const startIcon = <span className="text-[10px] font-bold" aria-hidden="true">▶</span>;
+const hamburgerIcon = <span className="text-[14px] font-bold" aria-hidden="true">≡</span>;
+const closeIcon = <span className="text-[14px] font-bold" aria-hidden="true">✕</span>;
+const mobileCTAIcon = <span className="text-[10px] font-bold" aria-hidden="true">▶</span>;
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -78,7 +61,7 @@ export default function Navbar() {
         {/* Desktop CTA */}
         <div className="hidden lg:block">
           <Link
-            href="/start"
+            href="/typing-test"
             className="flex items-center gap-1.5 px-5 py-2.5 bg-[#126dfb] hover:bg-blue-600 text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
             onClick={handleLinkClick}
           >
@@ -121,7 +104,7 @@ export default function Navbar() {
 
           <div className="mt-4 flex justify-center">
             <Link
-              href="/start"
+              href="/typing-test"
               onClick={handleLinkClick}
               className="flex items-center gap-1.5 px-6 py-3 bg-[#126dfb] hover:bg-blue-600 text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
             >

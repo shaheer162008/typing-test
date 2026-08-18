@@ -1,8 +1,9 @@
 import type { NavLink, FooterSection, Testimonial, FAQItem, BlogArticle } from "@/types";
+import Image from "next/image";
 
 export const navLinks: NavLink[] = [
-  { name: "Practice by Time", href: "/practice" },
-  { name: "Test by Time", href: "/test" },
+  { name: "Practice by Time", href: "/typing-practice" },
+  { name: "Test by Time", href: "/typing-test" },
   { name: "Blogs", href: "/blogs" },
   { name: "About", href: "/about" },
   { name: "Contact", href: "/contact" },
@@ -11,21 +12,39 @@ export const navLinks: NavLink[] = [
 
 export const footerLinks: FooterSection[] = [
   {
-    title: "Practice by Time",
+    title: "Typing Test by Time",
     links: [
-      { name: "1 Minute Test", href: "/1-minute-test" },
-      { name: "2 Minute Test", href: "/2-minute-test" },
-      { name: "3 Minute Test", href: "/3-minute-test" },
-      { name: "5 Minute Test", href: "/5-minute-test" },
-      { name: "10 Minute Test", href: "/10-minute-test" },
+      { name: "1 Minute Typing Test", href: "/typing-test/1-minute" },
+      { name: "2 Minute Typing Test", href: "/typing-test/2-minute" },
+      { name: "3 Minute Typing Test", href: "/typing-test/3-minute" },
+      { name: "5 Minute Typing Test", href: "/typing-test/5-minute" },
+      { name: "10 Minute Typing Test", href: "/typing-test/10-minute" },
+    ],
+  },
+  {
+    title: "Typing Practice by Time",
+    links: [
+      { name: "1 Minute Typing Practice", href: "/typing-practice/1-minute" },
+      { name: "2 Minute Typing Practice", href: "/typing-practice/2-minute" },
+      { name: "3 Minute Typing Practice", href: "/typing-practice/3-minute" },
+      { name: "5 Minute Typing Practice", href: "/typing-practice/5-minute" },
+      { name: "10 Minute Typing Practice", href: "/typing-practice/10-minute" },
+    ],
+  },
+  {
+    title: "Word Typing Test",
+    links: [
+      { name: "10 Word Typing Test", href: "/word-typing/10-words" },
+      { name: "25 Word Typing Test", href: "/word-typing/25-words" },
+      { name: "50 Word Typing Test", href: "/word-typing/50-words" },
     ],
   },
   {
     title: "Quick Links",
     links: [
       { name: "Home", href: "/" },
-      { name: "Typing Test", href: "/test" },
-      { name: "Practice", href: "/practice" },
+      { name: "Typing Test", href: "/typing-test" },
+      { name: "Practice", href: "/typing-practice" },
     ],
   },
   {
@@ -34,7 +53,7 @@ export const footerLinks: FooterSection[] = [
       { name: "Blogs", href: "/blogs" },
       { name: "Typing Tips", href: "/tips" },
       { name: "WPM Guide", href: "/wpm-guide" },
-      { name: "FAQ", href: "/faq" },
+      { name: "FAQ", href: "/faqs" },
     ],
   },
 ];
@@ -135,61 +154,84 @@ export const featureGridItems = [
     title: "Real-Time Feedback",
     description: "See correct and incorrect keystrokes highlighted instantly as you type, with no waiting for results.",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
+      <Image
+        src="/icons/real-time.svg"
+        alt="Real-Time Feedback icon"
+        width={32}
+        height={32}
+        className="object-contain"
+        aria-hidden="true"
+      />
     ),
   },
   {
     title: "Practice by Skill Level",
     description: "Choose beginner, intermediate, or advanced passages. Difficulty scales with you as your WPM improves.",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-      </svg>
+      <Image
+        src="/icons/skill.svg"
+        alt="Practice by Skill Level icon"
+        width={32}
+        height={32}
+        className="object-contain"
+        aria-hidden="true"
+      />
     ),
   },
   {
     title: "Certificates",
     description: "Earn shareable typing certificates for every verified speed milestone. Add them to your resume or LinkedIn.",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 15l-2 5-9-5 5-9 5 2" />
-        <path d="M12 15l2 5 9-5-5-9-5 2" />
-      </svg>
+      <Image
+        src="/icons/certificate.svg"
+        alt="Certificates icon"
+        width={32}
+        height={32}
+        className="object-contain"
+        aria-hidden="true"
+      />
     ),
   },
   {
     title: "Progress Dashboard",
     description: "Your personal dashboard tracks WPM trends, accuracy over time, practice streaks, and badge collection.",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-      </svg>
+      <Image
+        src="/icons/dashboard.svg"
+        alt="Progress Dashboard icon"
+        width={32}
+        height={32}
+        className="object-contain"
+        aria-hidden="true"
+      />
     ),
   },
   {
     title: "Timed & Word Modes",
     description: "Five timed lengths and three word counts give you a lane for every kind of practice session.",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
+      <Image
+        src="/icons/time-locked.svg"
+        alt="Timed & Word Modes icon"
+        width={32}
+        height={32}
+        className="object-contain"
+        aria-hidden="true"
+      />
     ),
   },
   {
     title: "No Sign-Up Required",
     description: "Open the test and start typing instantly. Create a free account only when you want to save results.",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <line x1="4" y1="9" x2="20" y2="9" />
-        <line x1="4" y1="15" x2="20" y2="15" />
-      </svg>
+      <Image
+        src="/icons/no-signin.svg"
+        alt="No Sign-Up Required icon"
+        width={32}
+        height={32}
+        className="object-contain"
+        aria-hidden="true"
+      />
     ),
   },
 ];

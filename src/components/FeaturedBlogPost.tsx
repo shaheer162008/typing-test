@@ -35,10 +35,7 @@ export default function FeaturedBlogPost({ article }: FeaturedBlogPostProps) {
             </span>
           </Link>
           <span className="text-[14px] text-gray-500 flex items-center gap-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
+            <span className="text-[10px]" aria-hidden="true">⌚</span>
             5 min read
           </span>
         </div>

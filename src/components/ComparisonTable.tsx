@@ -1,11 +1,5 @@
+import Image from "next/image";
 import { comparisonData, ctaBadges } from "@/lib/constants";
-
-const logoIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 2V22M2 12H22" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M16.24 7.76L7.76 16.24M7.76 7.76L16.24 16.24" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-  </svg>
-);
 
 export default function ComparisonTable() {
   const { otherToolsPoints, typingTestPoints } = comparisonData;
@@ -45,14 +39,19 @@ export default function ComparisonTable() {
             </header>
           </article>
 
-          {/* Right Card: Typing Test (Highlighted with Blue Border) */}
+          {/* Right Card: Typing Test Skill (Highlighted with Blue Border) */}
           <article className="bg-white rounded-[2.5rem] p-8 md:p-10 border-2 border-[#126dfb] shadow-[0_10px_30px_rgba(18,109,251,0.08)] flex flex-col justify-between relative">
             <header>
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-8 h-8 bg-[#126dfb] rounded-lg flex items-center justify-center shadow-sm" aria-hidden="true">
-                  {logoIcon}
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">Typing Test</h3>
+                <Image
+                  src="/icons/keyboard_logo.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="w-8 h-8"
+                  aria-hidden="true"
+                />
+                <h3 className="text-2xl font-bold text-gray-900">Typing Test Skill</h3>
               </div>
               <ul className="flex flex-col gap-5" role="list">
                 {typingTestPoints.map((point, index) => (

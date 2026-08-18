@@ -1,30 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DashboardPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<{ name: string; email: string; wpm: number; accuracy: number; streak: number } | null>(null);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    // Simulate auth check
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-      // In real app, fetch from session
-      setUser({
-        name: "Alex Johnson",
-        email: "alex@example.com",
-        wpm: 78,
-        accuracy: 96,
-        streak: 12,
-      });
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!loading && !user) {
+      router.replace("/auth/sign-in?from=/dashboard");
+    }
+  }, [user, loading, router]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -36,21 +28,8 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    return (
-      <main className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center px-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign In Required</h1>
-          <p className="text-gray-500 mb-6">Please sign in to access your dashboard.</p>
-          <Link
-            href="/auth/sign-in"
-            className="inline-flex items-center justify-center gap-2 bg-[#126dfb] hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all shadow-sm"
-          >
-            <Image src="/icons/google-auth.svg" alt="Google" width={20} height={20} className="object-contain" />
-            Sign In with Google
-          </Link>
-        </div>
-      </main>
-    );
+    // Will redirect via useEffect, show nothing meanwhile
+    return null;
   }
 
   return (
@@ -59,7 +38,7 @@ export default function DashboardPage() {
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.displayName ?? user.email}</h1>
             <p className="text-gray-500 mt-1">{user.email}</p>
           </div>
           <Link
@@ -73,10 +52,10 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <StatCard title="Current WPM" value={user.wpm} icon="/icons/real-time.svg" color="#126dfb" />
-          <StatCard title="Accuracy" value={`${user.accuracy}%`} icon="/icons/skill.svg" color="#10b981" />
-          <StatCard title="Daily Streak" value={`${user.streak} days`} icon="/icons/time-locked.svg" color="#f59e0b" />
-          <StatCard title="Tests Completed" value="142" icon="/icons/dashboard.svg" color="#8b5cf6" />
+          <StatCard title="Current WPM" value="—" icon="/icons/real-time.svg" color="#126dfb" />
+          <StatCard title="Accuracy" value="—" icon="/icons/skill.svg" color="#10b981" />
+          <StatCard title="Daily Streak" value="—" icon="/icons/time-locked.svg" color="#f59e0b" />
+          <StatCard title="Tests Completed" value="0" icon="/icons/dashboard.svg" color="#8b5cf6" />
         </div>
 
         {/* Quick Actions */}

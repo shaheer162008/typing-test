@@ -3,22 +3,28 @@
 import { useState, type MouseEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { navLinks } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 
-// Missing icons - using text placeholders until PNG assets are provided
-// Missing: start-icon.png, menu-icon.png, close-icon.png
-const startIcon = <span className="text-[10px] font-bold" aria-hidden="true">▶</span>;
-const hamburgerIcon = <span className="text-[14px] font-bold" aria-hidden="true">≡</span>;
-const closeIcon = <span className="text-[14px] font-bold" aria-hidden="true">✕</span>;
-const mobileCTAIcon = <span className="text-[10px] font-bold" aria-hidden="true">▶</span>;
+// Using proper SVG icons instead of text placeholders
+const hamburgerIcon = (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
+const closeIcon = (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const closeMenu = () => setIsMenuOpen(false);
@@ -39,7 +45,7 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-100 relative z-50" role="navigation" aria-label="Main navigation">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between relative">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3" aria-label="Typing Test Skill Home">
           <Image
@@ -54,99 +60,105 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-8" role="menubar">
-          {navLinks.map((link) => (
+        <div className="hidden lg:flex items-center gap-6 absolute left-1/2 -translate-x-1/2 w-max" role="menubar">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                role="menuitem"
+                className={`text-[15px] whitespace-nowrap transition-colors ${
+                  isActive ? "text-black font-bold" : "text-gray-500 font-medium hover:text-black"
+                }`}
+                onClick={handleLinkClick}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
+          {/* Dashboard link only for logged in users */}
+          {user && (
             <Link
-              key={link.href}
-              href={link.href}
+              href="/dashboard"
               role="menuitem"
-              className="text-[15px] font-medium text-gray-500 hover:text-black transition-colors"
+              className={`text-[15px] whitespace-nowrap transition-colors ${
+                pathname.startsWith("/dashboard") ? "text-black font-bold" : "text-gray-500 font-medium hover:text-black"
+              }`}
               onClick={handleLinkClick}
             >
-              {link.name}
+              Dashboard
             </Link>
-          ))}
+          )}
         </div>
 
         {/* Desktop CTA / User Menu */}
         <div className="hidden lg:flex items-center gap-3">
           {user ? (
-            <div className="relative">
+            <div 
+              className="relative"
+              onMouseEnter={() => setIsUserMenuOpen(true)}
+              onMouseLeave={() => setIsUserMenuOpen(false)}
+            >
               <button
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all"
+                className="flex items-center gap-2 px-1 py-1 rounded-full hover:bg-gray-50 transition-all focus:outline-none focus:ring-2 focus:ring-[#126dfb] border border-transparent hover:border-gray-200"
               >
                 {user.photoURL ? (
                   <Image
                     src={user.photoURL}
                     alt={user.displayName ?? "User"}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full"
+                    width={36}
+                    height={36}
+                    className="w-9 h-9 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-[#126dfb] flex items-center justify-center text-white text-[13px] font-bold">
+                  <div className="w-9 h-9 rounded-full bg-[#126dfb] flex items-center justify-center text-white text-[14px] font-bold">
                     {user.displayName?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? "U"}
                   </div>
                 )}
-                <span className="text-[14px] font-medium text-gray-700 max-w-[120px] truncate">
-                  {user.displayName ?? user.email}
-                </span>
-                {isAdmin && (
-                  <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md">
-                    ADMIN
-                  </span>
-                )}
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
               </button>
 
               {isUserMenuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-100 shadow-lg rounded-xl py-2 z-50">
-                  <Link
-                    href="/dashboard"
-                    className="block px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="block px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50"
-                      onClick={() => setIsUserMenuOpen(false)}
+                <div className="absolute right-0 top-full pt-2 z-50">
+                  <div className="min-w-[200px] w-max max-w-sm bg-white border border-gray-100 shadow-xl rounded-xl py-2">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-[14px] font-bold text-gray-900 break-words">
+                        {user.displayName || "Typist"}
+                      </p>
+                      <p className="text-[13px] font-medium text-gray-500 mt-0.5 break-words">
+                        {user.email}
+                      </p>
+                    </div>
+                    
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="block px-4 py-2 mt-1 text-[14px] font-medium text-gray-700 hover:bg-gray-50"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
+                    
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left px-4 py-2 mt-1 text-[14px] font-bold text-red-600 hover:bg-red-50"
                     >
-                      Admin Panel
-                    </Link>
-                  )}
-                  <div className="border-t border-gray-100 my-1" />
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full text-left px-4 py-2 text-[14px] text-red-600 hover:bg-red-50"
-                  >
-                    Sign Out
-                  </button>
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <>
-              <Link
-                href="/auth/sign-in"
-                className="text-[15px] font-medium text-gray-600 hover:text-black transition-colors px-3 py-2"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/typing-test"
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-[#126dfb] hover:bg-blue-600 text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
-                onClick={handleLinkClick}
-              >
-                {startIcon}
-                Start Free Test
-              </Link>
-            </>
+            <Link
+              href="/auth/sign-in"
+              className="flex items-center px-6 py-2.5 bg-[#126dfb] hover:bg-blue-600 text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
+              onClick={handleLinkClick}
+            >
+              Sign In
+            </Link>
           )}
         </div>
 
@@ -170,45 +182,82 @@ export default function Navbar() {
           className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-lg py-6 px-6 flex flex-col gap-5 animate-in fade-in slide-in-from-top-2 duration-200"
           role="menu"
         >
-          {navLinks.map((link) => (
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                role="menuitem"
+                onClick={handleLinkClick}
+                className={`text-[15px] transition-colors ${
+                  isActive ? "text-black font-bold" : "text-gray-600 font-medium hover:text-black"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
+          {user && (
             <Link
-              key={link.href}
-              href={link.href}
+              href="/dashboard"
               role="menuitem"
               onClick={handleLinkClick}
-              className="text-[15px] font-medium text-gray-600 hover:text-black"
+              className={`text-[15px] transition-colors ${
+                pathname.startsWith("/dashboard") ? "text-black font-bold" : "text-gray-600 font-medium hover:text-black"
+              }`}
             >
-              {link.name}
+              Dashboard
             </Link>
-          ))}
+          )}
 
           <div className="mt-4 flex flex-col gap-3">
             {user ? (
               <>
-                <Link href="/dashboard" onClick={closeMenu} className="text-[15px] font-medium text-gray-700">
-                  Dashboard
-                </Link>
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl mb-2">
+                  {user.photoURL ? (
+                    <Image
+                      src={user.photoURL}
+                      alt={user.displayName ?? "User"}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#126dfb] flex items-center justify-center text-white text-[15px] font-bold shrink-0">
+                      {user.displayName?.[0]?.toUpperCase() ?? user.email?.[0]?.toUpperCase() ?? "U"}
+                    </div>
+                  )}
+                  <div className="overflow-hidden">
+                    <p className="text-[14px] font-bold text-gray-900 truncate">
+                      {user.displayName || "Typist"}
+                    </p>
+                    <p className="text-[13px] font-medium text-gray-500 truncate mt-0.5">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+                {isAdmin && (
+                  <Link href="/admin" onClick={closeMenu} className="text-[15px] font-medium text-gray-700 px-4">
+                    Admin Panel
+                  </Link>
+                )}
+                <div className="border-t border-gray-100 my-1" />
                 <button
                   onClick={handleSignOut}
-                  className="text-left text-[15px] font-medium text-red-600"
+                  className="text-center text-[15px] font-bold text-red-600 px-4 py-2"
                 >
                   Sign Out
                 </button>
               </>
             ) : (
-              <>
-                <Link href="/auth/sign-in" onClick={closeMenu} className="text-[15px] font-medium text-gray-700">
-                  Sign In
-                </Link>
-                <Link
-                  href="/typing-test"
-                  onClick={handleLinkClick}
-                  className="flex items-center justify-center gap-1.5 px-6 py-3 bg-[#126dfb] hover:bg-blue-600 text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
-                >
-                  {mobileCTAIcon}
-                  Start Free Test
-                </Link>
-              </>
+              <Link
+                href="/auth/sign-in"
+                onClick={handleLinkClick}
+                className="flex items-center justify-center px-6 py-3 bg-[#126dfb] hover:bg-blue-600 text-white text-[15px] font-medium rounded-lg transition-all shadow-sm"
+              >
+                Sign In
+              </Link>
             )}
           </div>
         </div>

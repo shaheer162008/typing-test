@@ -6,7 +6,8 @@ export const navLinks: NavLink[] = [
   { name: "Practice", href: "/typing-practice" },
   { name: "Word Typing", href: "/word-typing" },
   { name: "WPM Guide", href: "/wpm-guide" },
-  { name: "Blog", href: "/blogs" },
+  { name: "Tips", href: "/tips" },
+  { name: "Blogs", href: "/blogs" },
 ];
 
 export const footerLinks: FooterSection[] = [

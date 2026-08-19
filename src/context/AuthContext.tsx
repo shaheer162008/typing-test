@@ -45,12 +45,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Lax`;
 
         // Check admin role from Firestore — wrapped in try/catch
-        // so Firestore offline errors don't crash the app
         try {
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          setIsAdmin(userDoc.data()?.role === "admin");
+          const userDocRef = doc(db, "users", firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (!userDoc.exists()) {
+            // If user document was deleted from Firestore (or is brand new), create it
+            import("firebase/firestore").then(async ({ setDoc, serverTimestamp }) => {
+              await setDoc(userDocRef, {
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName || "User",
+                role: "user",
+                createdAt: serverTimestamp(),
+                stats: { topWpm: 0, avgWpm: 0, testsTaken: 0 },
+                badges: []
+              });
+            });
+            setIsAdmin(false);
+          } else {
+            setIsAdmin(userDoc.data()?.role === "admin");
+          }
         } catch (err) {
-          // Firestore offline or rules blocking — default to non-admin
           console.warn("Could not fetch user role from Firestore:", err);
           setIsAdmin(false);
         }

@@ -1,21 +1,32 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
 
-const SAMPLE_TEXTS = [
-  "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once. Practice makes perfect when it comes to typing speed and accuracy. Consistency is the key to mastery.",
-  "Pack my box with five dozen liquor jugs. Another perfect pangram for typing practice. Consistent daily effort yields remarkable results over time. Your fingers will remember what your mind learns.",
-  "How vexingly quick daft zebras jump. Short but challenging with unusual letter combinations. Focus on rhythm and let your fingers find the keys naturally. Speed follows accuracy.",
-  "Bright vixens jump; dozy fowl quack. A whimsical sentence to test your rhythm. The best typists make it look effortless through thousands of hours of practice. Every keystroke counts.",
-  "Sphinx of black quartz, judge my vow. An ancient riddle turned typing drill. Every expert was once a beginner who refused to give up. Type with purpose and precision.",
-];
+const DURATION_MAP: Record<string, { seconds: number; label: string }> = {
+  "1-minute": { seconds: 60, label: "1 Minute" },
+  "2-minute": { seconds: 120, label: "2 Minutes" },
+  "3-minute": { seconds: 180, label: "3 Minutes" },
+  "5-minute": { seconds: 300, label: "5 Minutes" },
+  "10-minute": { seconds: 600, label: "10 Minutes" },
+  "15-minute": { seconds: 900, label: "15 Minutes" },
+  "30-minute": { seconds: 1800, label: "30 Minutes" },
+};
 
-export default function TypingTest3MinutePage() {
-  const [text, setText] = useState("");
+export default function TypingTestDynamicPage({ params }: { params: Promise<{ duration: string }> }) {
+  const { duration } = use(params);
+  const { user } = useAuth();
+  const config = DURATION_MAP[duration];
+
+  const [text, setText] = useState("Loading test...");
+  const [availableLessons, setAvailableLessons] = useState<any[]>([]);
+  const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
-  const [timeLeft, setTimeLeft] = useState(180);
+  const [timeLeft, setTimeLeft] = useState(config?.seconds || 60);
   const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
@@ -23,11 +34,32 @@ export default function TypingTest3MinutePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-    setText(randomText);
-  }, []);
+  const totalSeconds = config?.seconds || 60;
+  const label = config?.label || "Typing Test";
 
+  const loadLesson = async () => {
+    try {
+      const q = query(collection(db, "lessons"), where("type", "==", "test"), where("mode", "==", duration));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const lessons = snap.docs.map(doc => doc.data());
+        setAvailableLessons(lessons);
+        setText(lessons[0].text);
+        setSelectedLessonIndex(0);
+      } else {
+        setText("No lesson found for this duration in the database. Please seed the database from the admin panel.");
+      }
+    } catch (err) {
+      console.error(err);
+      setText("Failed to load lesson from database.");
+    }
+  };
+
+  useEffect(() => {
+    loadLesson();
+  }, [duration]);
+
+  // Timer
   useEffect(() => {
     if (isActive && timeLeft > 0) {
       intervalRef.current = setInterval(() => {
@@ -45,6 +77,7 @@ export default function TypingTest3MinutePage() {
     };
   }, [isActive, timeLeft]);
 
+  // Calculate stats on input change
   useEffect(() => {
     if (!isActive && userInput.length > 0) return;
 
@@ -69,6 +102,11 @@ export default function TypingTest3MinutePage() {
     }
 
     setStats({ wpm, accuracy, errors, correctChars: correct, totalChars });
+    
+    // Auto finish if text is completed before time
+    if (userInput.length >= text.length && text.length > 20) {
+      finishTest();
+    }
   }, [userInput, text, isActive, startTime]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,21 +118,55 @@ export default function TypingTest3MinutePage() {
     setUserInput(e.target.value);
   };
 
-  const finishTest = useCallback(() => {
-    setIsActive(false);
-    setIsFinished(true);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  }, []);
-
-  const restartTest = () => {
+  const handleLessonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const idx = parseInt(e.target.value);
+    setSelectedLessonIndex(idx);
+    setText(availableLessons[idx].text);
+    // Restart the state for the new lesson
     setUserInput("");
-    setTimeLeft(180);
+    setTimeLeft(totalSeconds);
     setIsActive(false);
     setIsFinished(false);
     setStartTime(null);
     setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
-    const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-    setText(randomText);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const finishTest = useCallback(async () => {
+    setIsActive(false);
+    setIsFinished(true);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    // Save test if logged in
+    if (user && stats.wpm > 0) {
+      try {
+        await addDoc(collection(db, "tests"), {
+          userId: user.uid,
+          displayName: user.displayName || "Anonymous",
+          type: "test",
+          mode: duration,
+          wpm: stats.wpm,
+          accuracy: stats.accuracy,
+          errors: stats.errors,
+          durationSeconds: totalSeconds,
+          createdAt: serverTimestamp(), // For Leaderboard
+          timestamp: serverTimestamp(), // Kept for backwards compatibility with Dashboard
+        });
+      } catch (err) {
+        console.error("Failed to save test:", err);
+      }
+    }
+  }, [user, stats, duration, totalSeconds]);
+
+  const restartTest = () => {
+    setUserInput("");
+    setTimeLeft(totalSeconds);
+    setIsActive(false);
+    setIsFinished(false);
+    setStartTime(null);
+    setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
+    // Reload lesson to ensure fresh state or in case it changed
+    loadLesson();
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -104,32 +176,59 @@ export default function TypingTest3MinutePage() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  // Format time display
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`;
   };
+
+  if (!config) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid Duration</h1>
+          <Link href="/typing-test" className="text-blue-600 underline">Go back to Typing Test</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-6 py-8 md:py-16">
+        {/* Header */}
         <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <Link href="/typing-test" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
-              â† Back to Timed Tests
+              &larr; Back to Timed Tests
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900">3 Minute Typing Test</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{label} Typing Test</h1>
           </div>
-          {isFinished && (
-            <Link
-              href="/typing-test"
-              className="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Try Another Duration
-            </Link>
-          )}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {availableLessons.length > 1 && !isActive && !isFinished && (
+              <select 
+                value={selectedLessonIndex} 
+                onChange={handleLessonChange}
+                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-[#126dfb] focus:outline-none"
+              >
+                {availableLessons.map((l, idx) => (
+                  <option key={idx} value={idx}>Lesson {idx + 1} ({l.difficulty})</option>
+                ))}
+              </select>
+            )}
+            {isFinished && (
+              <Link
+                href="/typing-test"
+                className="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Try Another Duration
+              </Link>
+            )}
+          </div>
         </header>
 
+        {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatBox label="Time" value={formatTime(timeLeft)} color="#f59e0b" icon="/icons/time-locked.svg" />
           <StatBox label="WPM" value={stats.wpm} color="#126dfb" icon="/icons/real-time.svg" />
@@ -137,21 +236,23 @@ export default function TypingTest3MinutePage() {
           <StatBox label="Errors" value={stats.errors} color="#ef4444" icon="/icons/dashboard.svg" />
         </div>
 
+        {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-500">Progress</span>
             <span className="font-semibold text-[#126dfb]">
-              {Math.round(((180 - timeLeft) / 180) * 100)}%
+              {Math.round(((totalSeconds - timeLeft) / totalSeconds) * 100)}%
             </span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#126dfb] to-blue-400 rounded-full transition-all duration-300"
-              style={{ width: `${((180 - timeLeft) / 180) * 100}%` }}
+              style={{ width: `${((totalSeconds - timeLeft) / totalSeconds) * 100}%` }}
             />
           </div>
         </div>
 
+        {/* Text Display */}
         <div className="bg-white rounded-2xl border border-gray-100 p-8 mb-8 shadow-sm">
           <div className="mb-4 flex flex-wrap gap-1.5 max-w-3xl" role="text" aria-label="Text to type">
             {text.split("").map((char, index) => {
@@ -164,7 +265,7 @@ export default function TypingTest3MinutePage() {
                 className += "text-gray-300";
               }
               if (char === " ") className += " w-2";
-              return <span key={index} className={className}>{char === " " ? "â£" : char}</span>;
+              return <span key={index} className={className}>{char === " " ? "\u2423" : char}</span>;
             })}
           </div>
 
@@ -173,6 +274,7 @@ export default function TypingTest3MinutePage() {
           )}
         </div>
 
+        {/* Input Area */}
         <div className="mb-8">
           <input
             ref={inputRef}
@@ -183,11 +285,12 @@ export default function TypingTest3MinutePage() {
             disabled={isFinished}
             autoFocus={!isActive && !isFinished}
             className="w-full px-6 py-4 text-lg font-mono bg-[#f8fafc] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#126dfb] focus:ring-2 focus:ring-[#126dfb]/20 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
-            placeholder={isFinished ? "Test complete â€” click Restart to try again" : "Start typing here..."}
+            placeholder={isFinished ? "Test complete -- click Restart to try again" : "Start typing here..."}
             aria-label="Typing input"
           />
         </div>
 
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {isFinished ? (
             <>
@@ -214,6 +317,7 @@ export default function TypingTest3MinutePage() {
           )}
         </div>
 
+        {/* Results Modal */}
         {isFinished && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
             <div className="bg-white rounded-2xl p-8 max-w-md w-full animate-in zoom-in-95 slide-in-from-bottom-4">
@@ -222,7 +326,7 @@ export default function TypingTest3MinutePage() {
                   <Image src="/icons/certificate.svg" alt="" width={32} height={32} className="object-contain text-green-600" aria-hidden="true" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Test Complete!</h2>
-                <p className="text-gray-500 mt-1">3 Minute Typing Test</p>
+                <p className="text-gray-500 mt-1">{label} Typing Test</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-[#f8fafc] rounded-xl">

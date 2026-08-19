@@ -1,21 +1,29 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
 
-const SAMPLE_TEXTS = [
-  "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once. Practice makes perfect when it comes to typing speed and accuracy. Consistency is the key to mastery. Your daily dedication builds the foundation for exceptional performance. Every session matters.",
-  "Pack my box with five dozen liquor jugs. Another perfect pangram for typing practice. Consistent daily effort yields remarkable results over time. Your fingers will remember what your mind learns. Trust the process and embrace each session. The journey of a thousand miles begins with a single keystroke.",
-  "How vexingly quick daft zebras jump. Short but challenging with unusual letter combinations. Focus on rhythm and let your fingers find the keys naturally. Speed follows accuracy. Patience and persistence create champions. Your potential is unlimited.",
-  "Bright vixens jump; dozy fowl quack. A whimsical sentence to test your rhythm. The best typists make it look effortless through thousands of hours of practice. Every keystroke counts toward your goal. Excellence is a habit, not an act.",
-  "Sphinx of black quartz, judge my vow. An ancient riddle turned typing drill. Every expert was once a beginner who refused to give up. Type with purpose and precision. Your journey to mastery starts now. Believe in your progress.",
-];
+const COUNT_MAP: Record<string, { words: number; label: string }> = {
+  "10-words": { words: 10, label: "10 Words" },
+  "25-words": { words: 25, label: "25 Words" },
+  "50-words": { words: 50, label: "50 Words" },
+  "100-words": { words: 100, label: "100 Words" },
+};
 
-export default function TypingTest10MinutePage() {
-  const [text, setText] = useState("");
+export default function WordTypingDynamicPage({ params }: { params: Promise<{ count: string }> }) {
+  const { count } = use(params);
+  const { user } = useAuth();
+  const config = COUNT_MAP[count];
+
+  const [text, setText] = useState("Loading words...");
+  const [availableLessons, setAvailableLessons] = useState<any[]>([]);
+  const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
@@ -23,28 +31,43 @@ export default function TypingTest10MinutePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-    setText(randomText);
-  }, []);
+  const label = config?.label || "Word Typing";
+
+  const loadLesson = async () => {
+    try {
+      const q = query(collection(db, "lessons"), where("type", "==", "words"), where("mode", "==", count));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const lessons = snap.docs.map(doc => doc.data());
+        setAvailableLessons(lessons);
+        setText(lessons[0].text);
+        setSelectedLessonIndex(0);
+      } else {
+        setText("No word lesson found for this count in the database. Please seed the database from the admin panel.");
+      }
+    } catch (err) {
+      console.error(err);
+      setText("Failed to load word lesson from database.");
+    }
+  };
 
   useEffect(() => {
-    if (isActive && timeLeft > 0) {
+    loadLesson();
+  }, [count]);
+
+  // Timer going up
+  useEffect(() => {
+    if (isActive && !isFinished) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            finishTest();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setTimeElapsed((prev) => prev + 1);
       }, 1000);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive, timeLeft]);
+  }, [isActive, isFinished]);
 
+  // Calculate stats on input change
   useEffect(() => {
     if (!isActive && userInput.length > 0) return;
 
@@ -69,6 +92,11 @@ export default function TypingTest10MinutePage() {
     }
 
     setStats({ wpm, accuracy, errors, correctChars: correct, totalChars });
+    
+    // Auto finish when length matches text length
+    if (userInput.length >= text.length && text.length > 50 /* ensure it loaded */) {
+      finishTest();
+    }
   }, [userInput, text, isActive, startTime]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,21 +108,52 @@ export default function TypingTest10MinutePage() {
     setUserInput(e.target.value);
   };
 
-  const finishTest = useCallback(() => {
-    setIsActive(false);
-    setIsFinished(true);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  }, []);
-
-  const restartTest = () => {
+  const handleLessonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const idx = parseInt(e.target.value);
+    setSelectedLessonIndex(idx);
+    setText(availableLessons[idx].text);
     setUserInput("");
-    setTimeLeft(600);
+    setTimeElapsed(0);
     setIsActive(false);
     setIsFinished(false);
     setStartTime(null);
     setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
-    const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-    setText(randomText);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const finishTest = useCallback(async () => {
+    setIsActive(false);
+    setIsFinished(true);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    if (user && stats.wpm > 0) {
+      try {
+        await addDoc(collection(db, "tests"), {
+          userId: user.uid,
+          displayName: user.displayName || "Anonymous",
+          type: "words",
+          mode: count,
+          wpm: stats.wpm,
+          accuracy: stats.accuracy,
+          errors: stats.errors,
+          durationSeconds: timeElapsed,
+          createdAt: serverTimestamp(), // For Leaderboard
+          timestamp: serverTimestamp(), // Kept for backwards compatibility with Dashboard
+        });
+      } catch (err) {
+        console.error("Failed to save test:", err);
+      }
+    }
+  }, [user, stats, count, timeElapsed]);
+
+  const restartTest = () => {
+    setUserInput("");
+    setTimeElapsed(0);
+    setIsActive(false);
+    setIsFinished(false);
+    setStartTime(null);
+    setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
+    loadLesson();
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -104,54 +163,83 @@ export default function TypingTest10MinutePage() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  // Format time display
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`;
   };
+
+  if (!config) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid Word Count</h1>
+          <Link href="/word-typing" className="text-blue-600 underline">Go back to Word Typing</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-6 py-8 md:py-16">
+        {/* Header */}
         <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <Link href="/typing-test" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
-              â† Back to Timed Tests
+            <Link href="/word-typing" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
+              &larr; Back to Word Modes
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900">10 Minute Typing Test</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{label} Typing</h1>
           </div>
-          {isFinished && (
-            <Link
-              href="/typing-test"
-              className="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Try Another Duration
-            </Link>
-          )}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {availableLessons.length > 1 && !isActive && !isFinished && (
+              <select 
+                value={selectedLessonIndex} 
+                onChange={handleLessonChange}
+                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-[#126dfb] focus:outline-none"
+              >
+                {availableLessons.map((l, idx) => (
+                  <option key={idx} value={idx}>Word List {idx + 1} ({l.difficulty})</option>
+                ))}
+              </select>
+            )}
+            {isFinished && (
+              <Link
+                href="/word-typing"
+                className="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Try Another Length
+              </Link>
+            )}
+          </div>
         </header>
 
+        {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatBox label="Time" value={formatTime(timeLeft)} color="#f59e0b" icon="/icons/time-locked.svg" />
+          <StatBox label="Time Elapsed" value={formatTime(timeElapsed)} color="#f59e0b" icon="/icons/time-locked.svg" />
           <StatBox label="WPM" value={stats.wpm} color="#126dfb" icon="/icons/real-time.svg" />
           <StatBox label="Accuracy" value={`${stats.accuracy}%`} color="#10b981" icon="/icons/skill.svg" />
           <StatBox label="Errors" value={stats.errors} color="#ef4444" icon="/icons/dashboard.svg" />
         </div>
 
+        {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-500">Progress</span>
             <span className="font-semibold text-[#126dfb]">
-              {Math.round(((600 - timeLeft) / 600) * 100)}%
+              {Math.min(100, Math.round((userInput.length / text.length) * 100) || 0)}%
             </span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#126dfb] to-blue-400 rounded-full transition-all duration-300"
-              style={{ width: `${((600 - timeLeft) / 600) * 100}%` }}
+              style={{ width: `${Math.min(100, (userInput.length / Math.max(1, text.length)) * 100)}%` }}
             />
           </div>
         </div>
 
+        {/* Text Display */}
         <div className="bg-white rounded-2xl border border-gray-100 p-8 mb-8 shadow-sm">
           <div className="mb-4 flex flex-wrap gap-1.5 max-w-3xl" role="text" aria-label="Text to type">
             {text.split("").map((char, index) => {
@@ -164,7 +252,7 @@ export default function TypingTest10MinutePage() {
                 className += "text-gray-300";
               }
               if (char === " ") className += " w-2";
-              return <span key={index} className={className}>{char === " " ? "â£" : char}</span>;
+              return <span key={index} className={className}>{char === " " ? "\u2423" : char}</span>;
             })}
           </div>
 
@@ -173,6 +261,7 @@ export default function TypingTest10MinutePage() {
           )}
         </div>
 
+        {/* Input Area */}
         <div className="mb-8">
           <input
             ref={inputRef}
@@ -183,11 +272,12 @@ export default function TypingTest10MinutePage() {
             disabled={isFinished}
             autoFocus={!isActive && !isFinished}
             className="w-full px-6 py-4 text-lg font-mono bg-[#f8fafc] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#126dfb] focus:ring-2 focus:ring-[#126dfb]/20 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
-            placeholder={isFinished ? "Test complete â€” click Restart to try again" : "Start typing here..."}
+            placeholder={isFinished ? "Typing complete -- click Restart to try again" : "Start typing here..."}
             aria-label="Typing input"
           />
         </div>
 
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {isFinished ? (
             <>
@@ -195,14 +285,8 @@ export default function TypingTest10MinutePage() {
                 onClick={restartTest}
                 className="w-full sm:w-auto px-8 py-3.5 bg-[#126dfb] hover:bg-blue-600 text-white font-semibold rounded-xl transition-all shadow-sm"
               >
-                Restart Test
+                Restart Word Test
               </button>
-              <Link
-                href="/auth/sign-in"
-                className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold rounded-xl transition-all text-center"
-              >
-                Save Result
-              </Link>
             </>
           ) : (
             <button
@@ -214,15 +298,16 @@ export default function TypingTest10MinutePage() {
           )}
         </div>
 
+        {/* Results Modal */}
         {isFinished && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
             <div className="bg-white rounded-2xl p-8 max-w-md w-full animate-in zoom-in-95 slide-in-from-bottom-4">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                  <Image src="/icons/certificate.svg" alt="" width={32} height={32} className="object-contain text-green-600" aria-hidden="true" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Image src="/icons/skill.svg" alt="" width={32} height={32} className="object-contain text-purple-600" aria-hidden="true" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Test Complete!</h2>
-                <p className="text-gray-500 mt-1">10 Minute Typing Test</p>
+                <h2 className="text-2xl font-bold text-gray-900">Word Typing Complete!</h2>
+                <p className="text-gray-500 mt-1">Finished in {formatTime(timeElapsed)}</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-[#f8fafc] rounded-xl">
@@ -248,16 +333,10 @@ export default function TypingTest10MinutePage() {
                   Try Again
                 </button>
                 <Link
-                  href="/auth/sign-in"
-                  className="block w-full text-center py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all"
-                >
-                  Save & Get Certificate
-                </Link>
-                <Link
-                  href="/typing-test"
+                  href="/word-typing"
                   className="block w-full text-center py-3 text-[#126dfb] font-semibold hover:underline"
                 >
-                  Choose Different Duration
+                  Choose Different Count
                 </Link>
               </div>
             </div>

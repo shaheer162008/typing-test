@@ -1,21 +1,30 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
-const SAMPLE_TEXTS = [
-  "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once.",
-  "Pack my box with five dozen liquor jugs. Another perfect pangram for typing practice.",
-  "How vexingly quick daft zebras jump. Short but challenging with unusual letter combinations.",
-  "Bright vixens jump; dozy fowl quack. A whimsical sentence to test your rhythm.",
-  "Sphinx of black quartz, judge my vow. An ancient riddle turned typing drill.",
-];
+const DURATION_MAP: Record<string, { seconds: number; label: string }> = {
+  "1-minute": { seconds: 60, label: "1 Minute" },
+  "2-minute": { seconds: 120, label: "2 Minutes" },
+  "3-minute": { seconds: 180, label: "3 Minutes" },
+  "5-minute": { seconds: 300, label: "5 Minutes" },
+  "10-minute": { seconds: 600, label: "10 Minutes" },
+  "15-minute": { seconds: 900, label: "15 Minutes" },
+  "30-minute": { seconds: 1800, label: "30 Minutes" },
+};
 
-export default function TypingTest1MinutePage() {
-  const [text, setText] = useState("");
+export default function TypingPracticeDynamicPage({ params }: { params: Promise<{ duration: string }> }) {
+  const { duration } = use(params);
+  const config = DURATION_MAP[duration];
+
+  const [text, setText] = useState("Loading practice...");
+  const [availableLessons, setAvailableLessons] = useState<any[]>([]);
+  const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(config?.seconds || 60);
   const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
@@ -23,11 +32,30 @@ export default function TypingTest1MinutePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize test
+  const totalSeconds = config?.seconds || 60;
+  const label = config?.label || "Typing Practice";
+
+  const loadLesson = async () => {
+    try {
+      const q = query(collection(db, "lessons"), where("type", "==", "practice"), where("mode", "==", duration));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const lessons = snap.docs.map(doc => doc.data());
+        setAvailableLessons(lessons);
+        setText(lessons[0].text);
+        setSelectedLessonIndex(0);
+      } else {
+        setText("No practice lesson found for this duration in the database. Please seed the database from the admin panel.");
+      }
+    } catch (err) {
+      console.error(err);
+      setText("Failed to load practice lesson from database.");
+    }
+  };
+
   useEffect(() => {
-    const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-    setText(randomText);
-  }, []);
+    loadLesson();
+  }, [duration]);
 
   // Timer
   useEffect(() => {
@@ -65,7 +93,6 @@ export default function TypingTest1MinutePage() {
     const totalChars = userInput.length;
     const accuracy = totalChars > 0 ? Math.round((correct / totalChars) * 100) : 0;
 
-    // WPM = (correct chars / 5) / (minutes elapsed)
     let wpm = 0;
     if (startTime && totalChars > 0) {
       const minutesElapsed = (Date.now() - startTime) / 60000;
@@ -73,6 +100,10 @@ export default function TypingTest1MinutePage() {
     }
 
     setStats({ wpm, accuracy, errors, correctChars: correct, totalChars });
+    
+    if (userInput.length >= text.length && text.length > 20) {
+      finishTest();
+    }
   }, [userInput, text, isActive, startTime]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +115,19 @@ export default function TypingTest1MinutePage() {
     setUserInput(e.target.value);
   };
 
+  const handleLessonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const idx = parseInt(e.target.value);
+    setSelectedLessonIndex(idx);
+    setText(availableLessons[idx].text);
+    setUserInput("");
+    setTimeLeft(totalSeconds);
+    setIsActive(false);
+    setIsFinished(false);
+    setStartTime(null);
+    setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
   const finishTest = useCallback(() => {
     setIsActive(false);
     setIsFinished(true);
@@ -92,22 +136,39 @@ export default function TypingTest1MinutePage() {
 
   const restartTest = () => {
     setUserInput("");
-    setTimeLeft(60);
+    setTimeLeft(totalSeconds);
     setIsActive(false);
     setIsFinished(false);
     setStartTime(null);
     setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
-    const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-    setText(randomText);
+    // Reload lesson to ensure fresh state or in case it changed
+    loadLesson();
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent backspace from navigating back
     if (e.key === "Backspace" && userInput.length === 0) {
       e.preventDefault();
     }
   };
+
+  // Format time display
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`;
+  };
+
+  if (!config) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid Duration</h1>
+          <Link href="/typing-practice" className="text-blue-600 underline">Go back to Typing Practice</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -115,24 +176,37 @@ export default function TypingTest1MinutePage() {
         {/* Header */}
         <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <Link href="/typing-test" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
-              â† Back to Timed Tests
+            <Link href="/typing-practice" className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
+              &larr; Back to Practice Modes
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900">1 Minute Typing Test</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{label} Typing Practice</h1>
           </div>
-          {isFinished && (
-            <Link
-              href="/typing-test"
-              className="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Try Another Duration
-            </Link>
-          )}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {availableLessons.length > 1 && !isActive && !isFinished && (
+              <select 
+                value={selectedLessonIndex} 
+                onChange={handleLessonChange}
+                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-[#126dfb] focus:outline-none"
+              >
+                {availableLessons.map((l, idx) => (
+                  <option key={idx} value={idx}>Practice {idx + 1} ({l.difficulty})</option>
+                ))}
+              </select>
+            )}
+            {isFinished && (
+              <Link
+                href="/typing-practice"
+                className="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Try Another Duration
+              </Link>
+            )}
+          </div>
         </header>
 
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatBox label="Time" value={`${timeLeft}s`} color="#f59e0b" icon="/icons/time-locked.svg" />
+          <StatBox label="Time" value={formatTime(timeLeft)} color="#f59e0b" icon="/icons/time-locked.svg" />
           <StatBox label="WPM" value={stats.wpm} color="#126dfb" icon="/icons/real-time.svg" />
           <StatBox label="Accuracy" value={`${stats.accuracy}%`} color="#10b981" icon="/icons/skill.svg" />
           <StatBox label="Errors" value={stats.errors} color="#ef4444" icon="/icons/dashboard.svg" />
@@ -143,13 +217,13 @@ export default function TypingTest1MinutePage() {
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-500">Progress</span>
             <span className="font-semibold text-[#126dfb]">
-              {Math.round(((60 - timeLeft) / 60) * 100)}%
+              {Math.round(((totalSeconds - timeLeft) / totalSeconds) * 100)}%
             </span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#126dfb] to-blue-400 rounded-full transition-all duration-300"
-              style={{ width: `${((60 - timeLeft) / 60) * 100}%` }}
+              style={{ width: `${((totalSeconds - timeLeft) / totalSeconds) * 100}%` }}
             />
           </div>
         </div>
@@ -167,11 +241,10 @@ export default function TypingTest1MinutePage() {
                 className += "text-gray-300";
               }
               if (char === " ") className += " w-2";
-              return <span key={index} className={className}>{char === " " ? "â£" : char}</span>;
+              return <span key={index} className={className}>{char === " " ? "\u2423" : char}</span>;
             })}
           </div>
 
-          {/* Visual keyboard hint */}
           {!isActive && !isFinished && (
             <p className="text-center text-gray-400 text-sm">Click the input below and start typing to begin</p>
           )}
@@ -188,7 +261,7 @@ export default function TypingTest1MinutePage() {
             disabled={isFinished}
             autoFocus={!isActive && !isFinished}
             className="w-full px-6 py-4 text-lg font-mono bg-[#f8fafc] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#126dfb] focus:ring-2 focus:ring-[#126dfb]/20 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
-            placeholder={isFinished ? "Test complete â€” click Restart to try again" : "Start typing here..."}
+            placeholder={isFinished ? "Practice complete -- click Restart to try again" : "Start typing here..."}
             aria-label="Typing input"
           />
         </div>
@@ -201,27 +274,12 @@ export default function TypingTest1MinutePage() {
                 onClick={restartTest}
                 className="w-full sm:w-auto px-8 py-3.5 bg-[#126dfb] hover:bg-blue-600 text-white font-semibold rounded-xl transition-all shadow-sm"
               >
-                Restart Test
+                Restart Practice
               </button>
-              <Link
-                href="/auth/sign-in"
-                className="w-full sm:w-auto px-8 py-3.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold rounded-xl transition-all text-center"
-              >
-                Save Result
-              </Link>
             </>
           ) : (
             <button
-              onClick={() => {
-                setUserInput("");
-                setTimeLeft(60);
-                setIsActive(false);
-                setIsFinished(false);
-                setStartTime(null);
-                setStats({ wpm: 0, accuracy: 0, errors: 0, correctChars: 0, totalChars: 0 });
-                const randomText = SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)];
-                setText(randomText);
-              }}
+              onClick={restartTest}
               className="w-full sm:w-auto px-8 py-3.5 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all"
             >
               Reset
@@ -234,11 +292,11 @@ export default function TypingTest1MinutePage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
             <div className="bg-white rounded-2xl p-8 max-w-md w-full animate-in zoom-in-95 slide-in-from-bottom-4">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                  <Image src="/icons/certificate.svg" alt="" width={32} height={32} className="object-contain text-green-600" aria-hidden="true" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Image src="/icons/skill.svg" alt="" width={32} height={32} className="object-contain text-blue-600" aria-hidden="true" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Test Complete!</h2>
-                <p className="text-gray-500 mt-1">1 Minute Typing Test</p>
+                <h2 className="text-2xl font-bold text-gray-900">Practice Complete!</h2>
+                <p className="text-gray-500 mt-1">Great job practicing.</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-[#f8fafc] rounded-xl">
@@ -261,16 +319,10 @@ export default function TypingTest1MinutePage() {
                   onClick={restartTest}
                   className="w-full py-3 bg-[#126dfb] hover:bg-blue-600 text-white font-semibold rounded-xl transition-all"
                 >
-                  Try Again
+                  Practice Again
                 </button>
                 <Link
-                  href="/auth/sign-in"
-                  className="block w-full text-center py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-all"
-                >
-                  Save & Get Certificate
-                </Link>
-                <Link
-                  href="/typing-test"
+                  href="/typing-practice"
                   className="block w-full text-center py-3 text-[#126dfb] font-semibold hover:underline"
                 >
                   Choose Different Duration

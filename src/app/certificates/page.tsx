@@ -5,24 +5,42 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import FinalCta from "@/components/FinalCta";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 
 export default function CertificatesVerificationPage() {
   const [certId, setCertId] = useState("");
   const [verificationState, setVerificationState] = useState<"idle" | "loading" | "verified" | "error">("idle");
 
-  const handleVerify = (e: React.FormEvent) => {
+  const [certData, setCertData] = useState<any>(null);
+
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!certId.trim()) return;
 
     setVerificationState("loading");
-    // Simulate API verification call
-    setTimeout(() => {
-      if (certId.toLowerCase().startsWith("tt-")) {
+    
+    try {
+      const q = query(collection(db, "certificates"), where("certId", "==", certId.trim()));
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        
+        // Fetch user name
+        const userDocRef = doc(db, "users", data.userId);
+        const userDoc = await getDoc(userDocRef);
+        const userName = userDoc.exists() ? userDoc.data().displayName : "Anonymous";
+
+        setCertData({ ...data, userName });
         setVerificationState("verified");
       } else {
         setVerificationState("error");
       }
-    }, 1500);
+    } catch (err) {
+      console.error(err);
+      setVerificationState("error");
+    }
   };
 
   return (
@@ -64,14 +82,18 @@ export default function CertificatesVerificationPage() {
               </button>
             </form>
 
-            {verificationState === "verified" && (
+            {verificationState === "verified" && certData && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 p-6 bg-green-50 border border-green-200 rounded-2xl max-w-lg mx-auto text-left flex gap-4">
                 <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                   <span className="text-green-600 text-xl font-bold">✓</span>
                 </div>
                 <div>
                   <h3 className="text-green-800 font-bold text-lg mb-1">Authentic Certificate</h3>
-                  <p className="text-green-700 text-sm">Certificate ID: <span className="font-mono">{certId}</span> belongs to <strong>John Doe</strong>. <br/>Achieved <strong>85 WPM</strong> on Aug 15, 2025.</p>
+                  <p className="text-green-700 text-sm">
+                    Certificate ID: <span className="font-mono">{certData.certId}</span> belongs to <strong>{certData.userName}</strong>. 
+                    <br/>Achieved <strong>{certData.wpm} WPM</strong> on {certData.timestamp?.toDate ? certData.timestamp.toDate().toLocaleDateString() : "recently"}.
+                    <br/>Tier: <strong>{certData.title}</strong>
+                  </p>
                 </div>
               </motion.div>
             )}

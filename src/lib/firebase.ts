@@ -16,5 +16,5 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, "typing-test-skill"); // Explicitly pointing to the named database
 export default app;

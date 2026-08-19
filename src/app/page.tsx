@@ -11,6 +11,7 @@ import FAQ from "@/components/FAQ";
 import BlogSection from "@/components/BlogSection";
 import FinalCta from "@/components/FinalCta";
 import RankingSection from "@/components/RankingSection";
+import HomeLeaderboard from "@/components/HomeLeaderboard";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
     <HowItWorks />
     <CtaBanner />
     <RankingSection />
+    <HomeLeaderboard />
     <SocialProof />
     <ComparisonTable />
     <FAQ />

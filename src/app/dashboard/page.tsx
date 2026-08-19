@@ -1,20 +1,116 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+
+const CERT_TIERS = [
+  { id: "beginner", title: "Beginner", minWpm: 1, maxWpm: 30, description: "Just starting out. Focus on accuracy first." },
+  { id: "intermediate", title: "Intermediate", minWpm: 31, maxWpm: 50, description: "Building speed. Daily practice pays off." },
+  { id: "advanced", title: "Advanced", minWpm: 51, maxWpm: 70, description: "Solid technique. Ready for certification." },
+  { id: "expert", title: "Expert", minWpm: 71, maxWpm: 89, description: "Top tier. Consistency is your advantage." },
+  { id: "master", title: "Master", minWpm: 90, maxWpm: 999, description: "Elite speed. Certificate proves it." },
+];
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+
+  const [tests, setTests] = useState<Record<string, any>[]>([]);
+  const [certs, setCerts] = useState<Record<string, any>[]>([]);
+  const [stats, setStats] = useState({
+    highestWpm: 0,
+    avgAccuracy: 0,
+    totalTests: 0,
+    streak: 0
+  });
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/auth/sign-in?from=/dashboard");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    const loadData = async () => {
+      try {
+        const testsQ = query(collection(db, "tests"), where("userId", "==", user.uid));
+        const testsSnap = await getDocs(testsQ);
+        const fetchedTests: Record<string, any>[] = testsSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as Record<string, any>) }));
+        
+        // Sort descending by timestamp
+        fetchedTests.sort((a, b) => {
+          const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
+          const tB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
+          return tB - tA;
+        });
+
+        setTests(fetchedTests);
+
+        let maxWpm = 0;
+        let totalAcc = 0;
+        fetchedTests.forEach(t => {
+          if (t.wpm > maxWpm) maxWpm = t.wpm;
+          totalAcc += (t.accuracy || 0);
+        });
+
+        setStats({
+          highestWpm: maxWpm,
+          avgAccuracy: fetchedTests.length > 0 ? Math.round(totalAcc / fetchedTests.length) : 0,
+          totalTests: fetchedTests.length,
+          streak: 0 // Simplification for now
+        });
+
+        // Load certificates
+        const certsQ = query(collection(db, "certificates"), where("userId", "==", user.uid));
+        const certsSnap = await getDocs(certsQ);
+        let userCerts: Record<string, any>[] = certsSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as Record<string, any>) }));
+
+        // Auto-issue certificates if highest WPM meets new tiers
+        if (maxWpm > 0) {
+          let hasNewCerts = false;
+          for (const tier of CERT_TIERS) {
+            // Check if user's maxWpm qualifies for this tier
+            if (maxWpm >= tier.minWpm) {
+              const alreadyHas = userCerts.find(c => c["tierId"] === tier.id);
+              if (!alreadyHas) {
+                // Issue new certificate
+                const newCert: Record<string, any> = {
+                  userId: user.uid,
+                  tierId: tier.id,
+                  title: tier.title,
+                  wpm: maxWpm,
+                  description: tier.description,
+                  certId: `TT-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${new Date().getFullYear()}`,
+                };
+                const docRef = await addDoc(collection(db, "certificates"), { ...newCert, timestamp: serverTimestamp() });
+                userCerts.push({ id: docRef.id, ...newCert, timestamp: { toDate: () => new Date() } }); // Optimistic add
+                hasNewCerts = true;
+              }
+            }
+          }
+          if (hasNewCerts) {
+            // Sort by tier minWpm ascending just for rendering consistency
+            userCerts.sort((a, b) => {
+              const tA = CERT_TIERS.find(t => t.id === a["tierId"])?.minWpm || 0;
+              const tB = CERT_TIERS.find(t => t.id === b["tierId"])?.minWpm || 0;
+              return tA - tB;
+            });
+          }
+        }
+        
+        setCerts(userCerts);
+      } catch (err) {
+        console.error("Failed to load dashboard data", err);
+      }
+    };
+    loadData();
+  }, [user]);
 
   if (loading) {
     return (
@@ -28,7 +124,6 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    // Will redirect via useEffect, show nothing meanwhile
     return null;
   }
 
@@ -52,10 +147,10 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <StatCard title="Current WPM" value="—" icon="/icons/real-time.svg" color="#126dfb" />
-          <StatCard title="Accuracy" value="—" icon="/icons/skill.svg" color="#10b981" />
-          <StatCard title="Daily Streak" value="—" icon="/icons/time-locked.svg" color="#f59e0b" />
-          <StatCard title="Tests Completed" value="0" icon="/icons/dashboard.svg" color="#8b5cf6" />
+          <StatCard title="Highest WPM" value={stats.highestWpm > 0 ? stats.highestWpm : "—"} icon="/icons/real-time.svg" color="#126dfb" />
+          <StatCard title="Avg Accuracy" value={stats.totalTests > 0 ? `${stats.avgAccuracy}%` : "—"} icon="/icons/skill.svg" color="#10b981" />
+          <StatCard title="Daily Streak" value={stats.streak > 0 ? stats.streak : "—"} icon="/icons/time-locked.svg" color="#f59e0b" />
+          <StatCard title="Tests Completed" value={stats.totalTests} icon="/icons/dashboard.svg" color="#8b5cf6" />
         </div>
 
         {/* Quick Actions */}
@@ -64,7 +159,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <ActionCard
               title="Timed Test"
-              description="1–10 minute tests for endurance"
+              description="1–30 minute tests for endurance"
               href="/typing-test"
               icon="/icons/time-locked.svg"
             />
@@ -92,14 +187,26 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { id: 1, title: "Speed Demon", wpm: "100+", description: "Achieved 100+ WPM on a verified test", date: "Aug 15, 2025", status: "earned", certId: "TT-9X82-KL1M" },
-              { id: 2, title: "Accuracy Master", wpm: "98%+", description: "Maintained 98%+ accuracy over 10 tests", date: "Aug 12, 2025", status: "earned", certId: "TT-4A19-PL9Q" },
-              { id: 3, title: "Streak Champion", wpm: "30 days", description: "Completed a test every day for 30 days", date: "Aug 10, 2025", status: "earned", certId: "TT-7B33-MN2W" },
-              { id: 4, title: "Century Club", wpm: "100 WPM", description: "Reached 100 WPM milestone", date: "—", status: "locked" },
-            ].map((cert) => (
-              <CertificateCard key={cert.id} cert={cert} />
-            ))}
+            {CERT_TIERS.map((tier) => {
+              const earnedCert = certs.find(c => c.tierId === tier.id);
+              if (earnedCert) {
+                return <CertificateCard key={tier.id} cert={{ ...earnedCert, status: "earned" }} />;
+              }
+              // Render locked placeholder
+              return (
+                <CertificateCard 
+                  key={tier.id} 
+                  cert={{ 
+                    id: tier.id, 
+                    title: tier.title, 
+                    wpm: `Requires ${tier.minWpm} WPM`, 
+                    description: tier.description, 
+                    date: "—", 
+                    status: "locked" 
+                  }} 
+                />
+              );
+            })}
           </div>
         </section>
 
@@ -107,34 +214,47 @@ export default function DashboardPage() {
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h2>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-[#f8fafc] border-b border-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">Date</th>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">Test Type</th>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">WPM</th>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">Accuracy</th>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">Duration</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {[
-                  { date: "Aug 15, 2025", type: "5-min Test", wpm: 82, acc: 97, dur: "5:00" },
-                  { date: "Aug 14, 2025", type: "3-min Test", wpm: 79, acc: 95, dur: "3:00" },
-                  { date: "Aug 12, 2025", type: "25 Words", wpm: 85, acc: 98, dur: "0:42" },
-                  { date: "Aug 10, 2025", type: "10-min Test", wpm: 74, acc: 94, dur: "10:00" },
-                  { date: "Aug 8, 2025", type: "1-min Test", wpm: 88, acc: 96, dur: "1:00" },
-                ].map((item, i) => (
-                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 text-gray-600">{item.date}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{item.type}</td>
-                    <td className="px-6 py-4 font-bold text-[#126dfb]">{item.wpm}</td>
-                    <td className="px-6 py-4 text-green-600 font-medium">{item.acc}%</td>
-                    <td className="px-6 py-4 text-gray-500">{item.dur}</td>
+            {tests.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                You haven't taken any tests yet.
+                <div className="mt-4">
+                  <Link href="/typing-test" className="text-[#126dfb] hover:underline font-medium">Take your first test</Link>
+                </div>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-[#f8fafc] border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-6 py-4 font-semibold text-gray-700">Date</th>
+                    <th className="text-left px-6 py-4 font-semibold text-gray-700">Test Type</th>
+                    <th className="text-left px-6 py-4 font-semibold text-gray-700">WPM</th>
+                    <th className="text-left px-6 py-4 font-semibold text-gray-700">Accuracy</th>
+                    <th className="text-left px-6 py-4 font-semibold text-gray-700">Duration</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {tests.slice(0, 10).map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 text-gray-600">
+                        {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleDateString() : "Just now"}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900 capitalize">
+                        {item.type === "words" ? `${item.mode.replace("-words", "")} Words` : `${item.mode.replace("-minute", "")} Min Test`}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-[#126dfb]">{item.wpm}</td>
+                      <td className="px-6 py-4 text-green-600 font-medium">{item.accuracy}%</td>
+                      <td className="px-6 py-4 text-gray-500">
+                        {item.durationSeconds ? 
+                          (item.durationSeconds >= 60 ? 
+                            `${Math.floor(item.durationSeconds / 60)}:${(item.durationSeconds % 60).toString().padStart(2, '0')}` : 
+                            `${item.durationSeconds}s`
+                          ) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </section>
       </div>
@@ -197,12 +317,18 @@ function CertificateCard({ cert }: { cert: any }) {
         <p className={`text-sm leading-relaxed mb-4 ${isEarned ? "text-gray-600" : "text-gray-400"}`}>{cert.description}</p>
         {isEarned ? (
           <div className="flex gap-3">
-            <button className="flex-1 bg-[#126dfb] hover:bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm">
+            <Link
+              href={`/certificates/${cert.certId}`}
+              className="flex-1 text-center bg-[#126dfb] hover:bg-blue-600 text-white py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm"
+            >
               Download PDF
-            </button>
-            <button className="flex-1 border border-gray-200 hover:bg-gray-50 text-gray-700 py-2.5 rounded-xl font-medium text-sm transition-colors">
+            </Link>
+            <Link
+              href={`/certificates/${cert.certId}`}
+              className="flex-1 text-center border border-gray-200 hover:bg-gray-50 text-gray-700 py-2.5 rounded-xl font-medium text-sm transition-colors"
+            >
               Share Link
-            </button>
+            </Link>
           </div>
         ) : (
           <Link

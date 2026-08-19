@@ -9,11 +9,13 @@ import { motion } from 'framer-motion';
 
 export default function TypingPracticePage() {
   const modes = [
-    { duration: '1 Minute', desc: 'A short and relaxed session. Focus on accuracy with no pressure at all.', url: '/typing-practice/1-minute', color: 'bg-blue-50 text-[#126dfb] border-blue-100', delay: 0.1 },
-    { duration: '2 Minute', desc: 'Find your natural rhythm with slightly more time to settle in.', url: '/typing-practice/2-minute', color: 'bg-cyan-50 text-cyan-700 border-cyan-100', delay: 0.2 },
-    { duration: '3 Minute', desc: 'The sweet spot for building consistent and reliable muscle memory.', url: '/typing-practice/3-minute', color: 'bg-indigo-50 text-indigo-700 border-indigo-100', delay: 0.3 },
-    { duration: '5 Minute', desc: 'Push your endurance and maintain perfect accuracy across a longer session.', url: '/typing-practice/5-minute', color: 'bg-purple-50 text-purple-700 border-purple-100', delay: 0.4 },
-    { duration: '10 Minute', desc: 'The ultimate practice run. Build stamina and discipline with a full marathon session.', url: '/typing-practice/10-minute', color: 'bg-pink-50 text-pink-700 border-pink-100', delay: 0.5 },
+    { duration: '1 Minute', desc: 'A short and relaxed session. Focus on accuracy with no pressure at all.', url: '/typing-practice/1-minute', color: 'bg-blue-50 text-[#126dfb] border-blue-100', delay: 0.05 },
+    { duration: '2 Minute', desc: 'Find your natural rhythm with slightly more time to settle in.', url: '/typing-practice/2-minute', color: 'bg-cyan-50 text-cyan-700 border-cyan-100', delay: 0.1 },
+    { duration: '3 Minute', desc: 'The sweet spot for building consistent and reliable muscle memory.', url: '/typing-practice/3-minute', color: 'bg-indigo-50 text-indigo-700 border-indigo-100', delay: 0.15 },
+    { duration: '5 Minute', desc: 'Push your endurance and maintain perfect accuracy across a longer session.', url: '/typing-practice/5-minute', color: 'bg-purple-50 text-purple-700 border-purple-100', delay: 0.2 },
+    { duration: '10 Minute', desc: 'The ultimate practice run. Build stamina and discipline with a full marathon session.', url: '/typing-practice/10-minute', color: 'bg-pink-50 text-pink-700 border-pink-100', delay: 0.25 },
+    { duration: '15 Minute', desc: 'Extended endurance practice. Build rock-solid consistency over time.', url: '/typing-practice/15-minute', color: 'bg-amber-50 text-amber-700 border-amber-100', delay: 0.3 },
+    { duration: '30 Minute', desc: 'The ultimate practice marathon. Only the most dedicated typists attempt this.', url: '/typing-practice/30-minute', color: 'bg-orange-50 text-orange-700 border-orange-100', delay: 0.35 },
   ];
 
   const features = [
@@ -48,7 +50,7 @@ export default function TypingPracticePage() {
             </p>
           </motion.header>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 w-full place-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 w-full">
             {modes.map((mode, i) => (
               <motion.div 
                 key={i}
@@ -56,7 +58,7 @@ export default function TypingPracticePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: mode.delay }}
-                className={`w-full ${i === 3 ? 'lg:col-start-1 lg:col-end-2 lg:translate-x-1/2' : ''} ${i === 4 ? 'lg:col-start-2 lg:col-end-3 lg:translate-x-1/2' : ''}`}
+                className="w-full"
               >
                 <Link href={mode.url} className="group block h-full">
                   <div className="bg-white rounded-[2rem] p-8 border border-gray-100 hover:border-[#126dfb]/30 hover:shadow-lg transition-all duration-300 group cursor-pointer h-full flex flex-col justify-between">

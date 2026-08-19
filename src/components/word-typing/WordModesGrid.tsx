@@ -28,6 +28,7 @@ export default function WordModesGrid() {
   return (
     <section className="py-16 px-6 bg-[#f8fafc]">
       <div className="max-w-5xl mx-auto">
+        {/* Word Count Modes */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -37,13 +38,13 @@ export default function WordModesGrid() {
         </motion.div>
         
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.1 }}
         >
-          {wordModes.map((mode, index) => (
+          {wordModes.map((mode) => (
             <motion.div key={mode.path} variants={itemVariants}>
               <Link href={mode.path} className="block h-full">
                 <div className="bg-white rounded-2xl border border-gray-100 p-8 hover:border-[#126dfb]/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden h-full flex flex-col">
